@@ -27,13 +27,27 @@ $(document).ready(function() {
         [J,"orange"]
     ];
 
+    function tetrisPiece(layouts, color, localBoard,context){ //tetromino constructor
+        this.layouts = layouts;
+        this.color = color;
+        this.activeLayoutIndex = 0;
+        this.activeLayout = this.layouts[this.activeLayoutIndex];
+        this.x = 3;
+        this.y = -2;
+        this.localBoard = localBoard;
+        this.context = context;
+    }
+
+    let nextPiece = generateRandomPiece();
+      let currentPiece = generateRandomPiece(board, ctx);
+
     function drawBoard(r,c){ //recursive function which renders the canvas based on given board matrix
         if (r>=row)
             return;
         else if(c>=column)
             drawBoard(r+1, 0);
         else{
-            drawSquare(c, r, board[r][c]);
+            drawSquare(c, r, currentPiece.localBoard[r][c],ctx);
             drawBoard(r,c+1);
         }
     }
@@ -45,26 +59,22 @@ $(document).ready(function() {
         context.strokeRect(x*xLength+xAdd,y*yLength+yAdd,xLength,yLength);
     }
 
-    function drawSquare(x, y, color){ //updates board matrix and draws a new square to the main canvas when y>=0 (must be on canvas)
-        if (y>=0){ 
-            board[y][x] = color;
-            drawRect(ctx,x,y,color,"#1c1259",SQ,SQ);
-        }
-    }
+    function drawSquare(x, y, color, context){ //updates board matrix and draws a new square to the main canvas when y>=0 (must be on canvas)
+        let xAdd = context == nCTX ? 30 : 0;
+        let yAdd = context == nCTX ? 30 : 0;
 
-    function tetrisPiece(layouts, color){ //tetromino constructor
-        this.layouts = layouts;
-        this.color = color;
-        this.activeLayoutIndex = 0;
-        this.activeLayout = this.layouts[this.activeLayoutIndex];
-        this.x = 3;
-        this.y = -2;
+        if (y>=0 && context == ctx){ 
+            currentPiece.localBoard[y][x] = color;
+            drawRect(context,x,y,color,"#1c1259",SQ,SQ, xAdd, yAdd);
+        }else if(context == nCTX){
+            drawRect(context,x,y,color,"#1c1259",SQ,SQ, xAdd, yAdd);
+        }
     }
 
     tetrisPiece.prototype.fill = function(color){ //loops thru a tetromino's NxN activeLayout matrix and writes existing (1's) parts to the board & canvas by calling drawSquare
         this.activeLayout.forEach((r, i) => 
             r.forEach((c, k) => 
-                this.activeLayout[i][k] ? drawSquare(this.x + k, this.y + i, color) : null));
+                this.activeLayout[i][k] ? drawSquare(this.x + k, this.y + i, color, this.context) : null));
     }
 
     tetrisPiece.prototype.draw = function(){ //draws tetromino to the board & canvas
@@ -87,7 +97,7 @@ $(document).ready(function() {
                   return true;
               if (newY <= 0)
                   continue;
-              if(board[newY][newX]!= vacant /* && !pattern[r+y][c] && !pattern[r][c+x]*/)
+              if(this.localBoard[newY][newX]!= vacant /* && !pattern[r+y][c] && !pattern[r][c+x]*/)
                   return true;
                 
             }
@@ -106,14 +116,21 @@ $(document).ready(function() {
             //in the 'next piece' realm 
             //to the real main board via the last 'currentPiece' passing it over 
             this.lock();
+            let tempBoard = this.localBoard;
+            let tempContext = this.context;
             $.extend(currentPiece, nextPiece);
-            undrawNextPiece(nextPiece);
+            currentPiece.localBoard = tempBoard;
+            currentPiece.context = tempContext;
+            /* undrawNextPiece(nextPiece); */
+            nextPiece.undraw();
             nextPiece = generateRandomPiece();
-            drawNextPiece(nextPiece)
+            nextPiece.draw();
+            /* drawNextPiece(nextPiece) */
         }
     }
+
     /// i notice repeation here i could just use fill and pass thru the nCTX to tetrisPiece.fill
-    function undrawNextPiece({activeLayout}){
+    /* function undrawNextPiece({activeLayout}){
         for(let x=0;x<activeLayout.length;x++){
             for(let y=0;y<activeLayout[x].length;y++){
                 if(activeLayout[x][y]){
@@ -130,7 +147,7 @@ $(document).ready(function() {
                 }
             }
         }
-    }
+    } */
 
     tetrisPiece.prototype.moveRight = function(){
         if (!this.collision(1,0,this.activeLayout)){
@@ -173,11 +190,11 @@ $(document).ready(function() {
         }
     }
 
-      function generateRandomPiece(){
+      function generateRandomPiece(localBoard = null, context = nCTX){
         let randomPiece = {
             ...pieces[Math.floor(Math.random() * pieces.length)]
         };
-          return new tetrisPiece(randomPiece[0],randomPiece[1]);
+          return new tetrisPiece(randomPiece[0],randomPiece[1], localBoard, context);
       }
     tetrisPiece.prototype.lock = function(){
         for (let r=0;r< this.activeLayout.length;r++){
@@ -188,22 +205,22 @@ $(document).ready(function() {
                     gameOver = true;
                     break;
                 }
-                board[this.y+r][this.x+c] = this.color;
+                this.localBoard[this.y+r][this.x+c] = this.color;
             }
         }
         for(r = 0; r < row; r++){
             let isRowFull = true;
             for( c = 0; c < column; c++){
-                isRowFull = isRowFull && (board[r][c] != vacant);
+                isRowFull = isRowFull && (this.localBoard[r][c] != vacant);
             }
             if(isRowFull){
                 for( y = r; y > 1; y--){
                     for( c = 0; c < column; c++){
-                        board[y][c] = board[y-1][c];
+                        this.localBoard[y][c] = this.localBoard[y-1][c];
                     }
                 }
                 for( c = 0; c < column; c++){
-                    board[0][c] = vacant;
+                    this.localBoard[0][c] = vacant;
                 }
                 score += 10*scoreMultiplier;
                 $('#score').text(score);
@@ -236,7 +253,7 @@ $(document).ready(function() {
 
     function endGame(){
         cancelAnimationFrame(dropPiece);
-            board = new Array(row).fill(vacant).map(() => new Array(column).fill(vacant));
+            currentPiece.localBoard = new Array(row).fill(vacant).map(() => new Array(column).fill(vacant));
             $(document).off("keydown");
             drawRect(ctx,0,0,"black","black",200,400);
             ctx.fillStyle = "white";
@@ -280,8 +297,7 @@ $(document).ready(function() {
       });
 
       drawBoard(0,0);
-      let nextPiece = generateRandomPiece();
-      let currentPiece = generateRandomPiece();
+      
       drop();
-      drawNextPiece(nextPiece);
+      nextPiece.draw();
 });
