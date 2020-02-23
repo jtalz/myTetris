@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Tetris</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/3.6.1/fabric.min.js"></script>
+    <script src= "tetriminos.js"></script>
+    <script src = "index3.js"></script>
+    <link href="https://fonts.googleapis.com/css?family=Geo&display=swap" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="index.css">
+    
+</head>
+<body class="flex column">
+    <div class="header flex centerCenter">
+            <h1>Joshua's Tetris</h1>
+    </div>
+    <div id="main" class="flex space-around">
+        <div class="side">
+        </div>
+        <div class="flex centerCenter column">
+            <!-- <h1>Play</h1> -->
+            <canvas id="tetrisSpace" width='200' height='400'></canvas>
+        </div>
+        <div class="flex column">
+            <h1>Score</h1>
+            <div id="score" class="box">0</div>
+            <h1>Level</h1>
+            <div id="level" class="box">1</div>
+            <h1>Next Piece</h1>
+            <canvas id="nextPiece" width="170" height="85"></canvas>
+        </div>
+        
+        <div class="side">
+            <h1>Keyboard Controls</h1>
+            <p>↓ Move Down</p>
+            <p>→ Move Right</p>
+            <p>← Move Left</p>
+            <p>↑ Rotate</p>
+            <p>P Pause/Resume Game</p>
+            <h1>Game Information</h1>
+            <p>
+            Points are awarded by filling up rows with tetriminos.<br>
+            When a row is filled, it disappears.<br>
+            Every row filled generates 10 pts.</p>
+            <p>Levels increase every 50 points.<br>
+            Progressing levels mean faster falls.</p>
+
+        </div>
+    </div>
+    <div class="footer"></div>
+</body>
+
+</html>
