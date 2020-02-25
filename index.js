@@ -1,5 +1,7 @@
 $(document).ready(function() {
 
+
+    //goal is to make most of these private variables
     const cvs = document.getElementById('tetrisSpace');
     const ctx = cvs.getContext('2d');
     const nCVS = document.getElementById('nextPiece');
@@ -27,7 +29,7 @@ $(document).ready(function() {
         [J,"orange"]
     ];
 
-    function tetrisPiece(layouts, color, localBoard,context){ //tetromino constructor
+    function tetrisPiece(layouts, color, localBoard, context){ //tetromino constructor
         this.layouts = layouts;
         this.color = color;
         this.activeLayoutIndex = 0;
@@ -47,7 +49,7 @@ $(document).ready(function() {
         else if(c>=column)
             drawBoard(r+1, 0);
         else{
-            drawSquare(c, r, currentPiece.localBoard[r][c],ctx);
+            currentPiece.drawSquare(c, r, currentPiece.localBoard[r][c],ctx);
             drawBoard(r,c+1);
         }
     }
@@ -59,14 +61,14 @@ $(document).ready(function() {
         context.strokeRect(x*xLength+xAdd,y*yLength+yAdd,xLength,yLength);
     }
 
-    function drawSquare(x, y, color, context){ //updates board matrix and draws a new square to the main canvas when y>=0 (must be on canvas)
+    tetrisPiece.prototype.drawSquare = function(x,y, color = this.color,context = this.context){
+        //updates board matrix and draws a new square to the main canvas when y>=0 (must be on canvas)
         let xAdd = context == nCTX ? 30 : 0;
         let yAdd = context == nCTX ? 30 : 0;
-
         if (y>=0 && context == ctx){ 
-            currentPiece.localBoard[y][x] = color;
+            this.localBoard[y][x] = color;
             drawRect(context,x,y,color,"#1c1259",SQ,SQ, xAdd, yAdd);
-        }else if(context == nCTX){
+        }else if(this.context == nCTX){
             drawRect(context,x,y,color,"#1c1259",SQ,SQ, xAdd, yAdd);
         }
     }
@@ -74,7 +76,7 @@ $(document).ready(function() {
     tetrisPiece.prototype.fill = function(color){ //loops thru a tetromino's NxN activeLayout matrix and writes existing (1's) parts to the board & canvas by calling drawSquare
         this.activeLayout.forEach((r, i) => 
             r.forEach((c, k) => 
-                this.activeLayout[i][k] ? drawSquare(this.x + k, this.y + i, color, this.context) : null));
+                this.activeLayout[i][k] ? this.drawSquare(this.x + k, this.y + i, color, this.context) : null));
     }
 
     tetrisPiece.prototype.draw = function(){ //draws tetromino to the board & canvas
@@ -104,71 +106,33 @@ $(document).ready(function() {
         }
         return false;
     }
+    tetrisPiece.prototype.move = function(spaces, direction){ //performs general movement protocol, undrawing and redrawing elements on the corresponding board and canvas
+        this.undraw();
+        this[direction]+=spaces; //direction is x or y, and spaces is number of spaces to be moved
+        this.draw();
+    }//idea: this could be used for a button that instantly brings a block down to the bottom, must calculate spaces
 
-    tetrisPiece.prototype.moveDown = function(){
-        if (!this.collision(0,1,this.activeLayout)){
-            undrawThenDraw(true,'y',this);
-        }else {
-            //lock, gen newpiece
-            //this is a crucial spot
-            //if i add an active board attr to the tetromino object
-            //then i can switch it from null or whatever it is when its
-            //in the 'next piece' realm 
-            //to the real main board via the last 'currentPiece' passing it over 
-            this.lock();
-            let tempBoard = this.localBoard;
-            let tempContext = this.context;
-            $.extend(currentPiece, nextPiece);
-            currentPiece.localBoard = tempBoard;
-            currentPiece.context = tempContext;
-            /* undrawNextPiece(nextPiece); */
-            nextPiece.undraw();
-            nextPiece = generateRandomPiece();
-            nextPiece.draw();
-            /* drawNextPiece(nextPiece) */
-        }
+    tetrisPiece.prototype.moveDown = function(){ //ES6 checks for down1 collision then does it or locksAndUpdates
+        !this.collision(0,1,this.activeLayout) ? this.move(1,'y') : this.lockAndUpdate();
     }
-
-    /// i notice repeation here i could just use fill and pass thru the nCTX to tetrisPiece.fill
-    /* function undrawNextPiece({activeLayout}){
-        for(let x=0;x<activeLayout.length;x++){
-            for(let y=0;y<activeLayout[x].length;y++){
-                if(activeLayout[x][y]){
-                    drawRect(nCTX,y,x,vacant,vacant,SQ,SQ,30,20);
-                }
-            }
-        }
-    }
-    function drawNextPiece({color, activeLayout}){
-        for(let x=0;x<activeLayout.length;x++){
-            for(let y=0;y<activeLayout[x].length;y++){
-                if(activeLayout[x][y]){
-                    drawRect(nCTX,y,x,color,"#1c1259",SQ,SQ,30,20);
-                }
-            }
-        }
-    } */
 
     tetrisPiece.prototype.moveRight = function(){
-        if (!this.collision(1,0,this.activeLayout)){
-            undrawThenDraw(true,'x',this);
-        }else{
-            this.draw();
-        }
+        !this.collision(1,0,this.activeLayout) ? this.move(1,'x') : this.draw();
     }
 
     tetrisPiece.prototype.moveLeft = function(){
-        if (!this.collision(-1,0,this.activeLayout)){
-            undrawThenDraw(false,'x',this);
-        }else{
-            this.draw();
-        }
+        !this.collision(-1,0,this.activeLayout) ? this.move(-1,'x') : this.draw();
     }
 
-    function undrawThenDraw(increment,variable, user){
-        user.undraw();
-        increment ? user[variable]++:user[variable]--;
-        user.draw();
+    tetrisPiece.prototype.lockAndUpdate = function(){ //locks tetromino into place
+        this.lock(); //then transfers over next piece to current piece and calls for new next piece 
+        let {localBoard, context} = this;
+        $.extend(currentPiece, nextPiece); //deep clones next piece and replaces currentPiece
+        currentPiece.localBoard = localBoard;
+        currentPiece.context = context;
+        nextPiece.undraw();
+        nextPiece = generateRandomPiece();
+        nextPiece.draw();
     }
 
     tetrisPiece.prototype.rotate = function(){
@@ -198,6 +162,9 @@ $(document).ready(function() {
       }
     tetrisPiece.prototype.lock = function(){
         for (let r=0;r< this.activeLayout.length;r++){
+            //loops thru activeLayout checking for three things:
+            //1) empty space - in which it moves to nextloop 2) row placement- will call game over 
+            //3) in the case that none of the above conditions were met, it attaches the new color to the board
             for (let c=0;c< this.activeLayout[r].length;c++){
                 if(!this.activeLayout[r][c])
                     continue;
@@ -208,23 +175,27 @@ $(document).ready(function() {
                 this.localBoard[this.y+r][this.x+c] = this.color;
             }
         }
+        ///after the main board matrix has been updated...
+        //checks for full rows to delete and get points
+        //
         for(r = 0; r < row; r++){
             let isRowFull = true;
-            for( c = 0; c < column; c++){
+            for( c = 0; c < column; c++){ //checks that every element in a row is a color 
                 isRowFull = isRowFull && (this.localBoard[r][c] != vacant);
             }
-            if(isRowFull){
+            if(isRowFull){ //case that a row has been declared full
                 for( y = r; y > 1; y--){
                     for( c = 0; c < column; c++){
                         this.localBoard[y][c] = this.localBoard[y-1][c];
-                    }
+                    }//brings other rows down
                 }
                 for( c = 0; c < column; c++){
-                    this.localBoard[0][c] = vacant;
+                    this.localBoard[0][c] = vacant; //restarts top row with vacants
                 }
-                score += 10*scoreMultiplier;
-                $('#score').text(score);
-                if (score % 50 == 0){
+
+                score += 10*scoreMultiplier; //increments score
+                $('#score').text(score); //updates UI score
+                if (score % 50 == 0){ //updates level based on score progress
                     level++;
                     $('#level').text(level);
                     timeInterval-=50;
@@ -263,13 +234,10 @@ $(document).ready(function() {
 
         }
 
-    function writeScore(){
-        ctx.font = '30px serif';
-        ctx.textAlign = 'center';
-        ctx.fillText("Game Over",0,0)
-    }
-
-    $(document).on("keydown",function(e) {
+    $(document).on("keydown",function(e) { 
+        //this should be the control center essentially
+        //variables should be running thru here and it should determine the outcome
+        //of the game
         switch (e.which) {
           case 37:
             currentPiece.moveLeft(); // left
